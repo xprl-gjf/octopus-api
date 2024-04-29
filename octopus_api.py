@@ -14,6 +14,7 @@ class TentacleSession(aiohttp.ClientSession):
             sleep (float): The time the client will sleep after each request. \n
       	    retries (int): The number of retries for a successful request. \n
      	    retry_sleep (float): The time service sleeps between nonsuccessful request calls. Defaults to 1.0.
+            kwargs: Additional args passed through to the underlying aiohttp.ClientSession.
 
         Returns:
             TentacleSession(aiohttp.ClientSession)
@@ -61,6 +62,7 @@ class OctopusApi:
             rate (Optional[float]): The rate limits of the endpoint; default to no limit. \n
  	        resolution (Optional[str]): The time resolution of the rate (sec, minute), defaults to None.
 	        connections (Optional[int]): Maximum connections on the given endpoint, defaults to 5.
+            kwargs: Additional args passed through to the underlying aiohttp.ClientSession.
 
         Returns:
             OctopusApi
@@ -70,7 +72,7 @@ class OctopusApi:
     retries: int
 
     def __init__(self, rate: int = None, resolution: str = None, connections: int = 5,
-                 retries: int = 3):
+                 retries: int = 3, **kwargs):
 
         if rate or resolution:
             if resolution.lower() not in ["minute", "sec"]:
@@ -81,6 +83,7 @@ class OctopusApi:
 
         self.connections = connections
         self.retries = retries
+        self.session_kwargs = kwargs
 
     def get_coroutine(self, requests_list: List[Dict[str, Any]], func: callable):
 
@@ -99,7 +102,8 @@ class OctopusApi:
             conn = aiohttp.TCPConnector(limit_per_host=connections)
             async with TentacleSession(retries=retries,
                                        retry_sleep=sleep * self.connections * 2.0 if rate else 1.0,
-                                       connector=conn) as session:
+                                       connector=conn,
+                                       **self.session_kwargs) as session:
 
                 tasks = set()
                 itr = 0
